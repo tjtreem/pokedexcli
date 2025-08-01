@@ -4,75 +4,26 @@ import (
 	"bufio"
 	"os"
 	"fmt"
+	"time"
+	"math/rand"
 	"github.com/tjtreem/pokedexcli/input"
+	"github.com/tjtreem/pokedexcli/internal/pokecache"
 )
 
-type Config struct {
-	Next		*string
-	Previous	*string
-
-}
-
-
-type cliCommand struct {
-	name		string
-	description	string
-	callback	func() error
-
-}
-
-
-func commandExit() error {
-	fmt.Print("Closing the Pokedex... Goodbye!")
-	os.Exit(0)
-	return nil
-}
-
-
-func commandHelp() error {
-    fmt.Println(`Welcome to the Pokedex!
-Usage:
-`)
-    for _, cmd := range commands {
-	fmt.Printf("%s: %s\n", cmd.name, cmd.description)
-    }
-    return nil
-}
-
-var commands = map[string]cliCommand{}
+var commands = map[string]CliCommand{}
 
 func main() {
-    
-    config := &Config{}
 
-    commands = map[string]cliCommand {
-    "help": {
-    name:		"help",
-    description:	"Displays a help message",
-    callback:		commandHelp,
-    },
-    "exit": {
-    name:		"exit",
-    description:	"Exit the Pokedex",
-    callback:		commandExit,
-    },
-    "map": {
-	name:		"map",
-	description:	"Show the next 20 location areas",
-	callback: func() error {
-	    handleMap(config)
-	    return nil
-	},
-    },
-    "mapb": {
-	name:		"mapb",
-	description:	"Show previous 20 location areas",
-	callback: func() error {
-	    handleMapb(config)
-	    return nil
-	},
-    },
-}
+    rand.Seed(time.Now().UnixNano())
+    
+    config := &Config{
+	pokedex: make(map[string]Pokemon),
+    	Cache: pokecache.NewCache(5 * time.Minute),
+    }
+
+   
+    commands := GetCommands(config)
+
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
@@ -86,21 +37,53 @@ func main() {
 		continue
 	    }
 	    
-	 
-	    cmd, ok := commands[words[0]]
-	    if ok {
-		err := cmd.callback()
+	    cmdName := words[0] 
+	    cmd, ok := commands[cmdName]
+	    if !ok {
+		fmt.Println("Unknown command")
+		continue
+	    }
+
+	    if cmd.name == "explore" {
+		if len(words) < 2 {
+		    fmt.Println("You must provide an area name")
+		    continue
+		}
+	    	area_name := words[1]
+
+	    	err := commandExplore(config, area_name)
+	    	if err != nil {
+		    fmt.Println(err)
+	    	}
+	    } else if cmd.name == "catch" {
+	    	if len(words) < 2 {
+		    fmt.Println("please provide a pokemon name")
+		    continue
+		}
+		pokemonName := words[1]
+		
+		err := commandCatch(config, pokemonName)
+		if err != nil {
+		    fmt.Println(err)
+		}
+	    } else if cmd.name == "inspect" {
+		if len(words) < 2 {
+		    fmt.Println("please provide a pokemon name")
+		    continue
+		}
+		pokemonName := words[1]
+
+		err := commandInspect(config, pokemonName)
 		if err != nil {
 		    fmt.Println(err)
 		}
 	    } else {
-		fmt.Println("Unknown command")
+		err := cmd.callback()
+		if err != nil {
+		    fmt.Println(err)
+		}   
 	    }
-
-
-	    
-	    
-	}
 		
+	}
 }
 

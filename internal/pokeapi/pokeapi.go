@@ -3,7 +3,8 @@ package pokeapi
 import (
     "encoding/json"
     "net/http"
-
+    "io"
+    "github.com/tjtreem/pokedexcli/internal/pokecache"
 )
 
 
@@ -24,17 +25,34 @@ type LocationAreaResponse struct {
 
 // Fetches location areas from the provided url
 
-func FetchLocationAreas(url string) (*LocationAreaResponse, error) {
+func FetchLocationAreas(url string, cache *pokecache.Cache) (*LocationAreaResponse, error) {
+    data, ok := cache.Get(url)
+    if ok {
+	var result LocationAreaResponse
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+	    return nil, err
+	}
+	return &result, nil
+    }
     res, err := http.Get(url)
     if err != nil {
 	return nil, err
     }
     defer res.Body.Close()
 
-    var result LocationAreaResponse
-    if err := json.NewDecoder(res.Body).Decode(&result); err != nil {
+    body, err := io.ReadAll(res.Body)
+    if err != nil {
 	return nil, err
     }
+
+    var result LocationAreaResponse
+    err = json.Unmarshal(body, &result)
+    if err != nil {
+	return nil, err
+    }
+
+    cache.Add(url, body)
 
     return &result, nil
 
