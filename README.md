@@ -1,0 +1,1 @@
+Created a dynamic Pokedex using Golang. In it, you can search areas for Pokemon and attempt to catch them! It keeps your pokedex upt-to-date with all the captured pokemon and allows you to inspect the stats of each one. Enjoy!
